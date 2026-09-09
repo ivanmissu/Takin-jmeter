@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Takin-JMeter 项目分析报告</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2e; --panel2:#1c2437; --ink:#e6ebf5;
+    --muted:#9aa7bd; --line:#26304a; --brand:#4f8cff; --brand2:#22d3ee;
+    --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --chip:#243049;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(180deg,#0b0f18,#0f1420 40%); color:var(--ink); line-height:1.75;
+  }
+  a{color:var(--brand2);text-decoration:none}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 22px 80px}
+
+  /* Hero */
+  .hero{
+    position:relative; overflow:hidden; border-radius:0 0 28px 28px;
+    background:radial-gradient(1200px 400px at 15% -10%,rgba(79,140,255,.35),transparent 60%),
+               radial-gradient(900px 400px at 90% 0%,rgba(34,211,238,.22),transparent 55%),
+               linear-gradient(135deg,#141d33,#0f1626);
+    border-bottom:1px solid var(--line); padding:64px 22px 52px; margin-bottom:34px;
+  }
+  .hero-inner{max-width:1080px;margin:0 auto}
+  .badge{display:inline-block;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--brand2);background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.3);
+    padding:5px 12px;border-radius:999px;margin-bottom:18px}
+  .hero h1{font-size:40px;line-height:1.2;margin:0 0 14px;font-weight:800;
+    background:linear-gradient(90deg,#fff,#9cc3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--muted);max-width:720px;margin:0 0 22px;font-size:16px}
+  .meta{display:flex;flex-wrap:wrap;gap:10px}
+  .meta span{font-size:13px;color:var(--ink);background:var(--chip);border:1px solid var(--line);
+    padding:6px 12px;border-radius:8px}
+
+  /* Stat cards */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:-10px 0 40px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+  .stat .num{font-size:30px;font-weight:800;color:#fff}
+  .stat .num small{font-size:15px;color:var(--muted);font-weight:600}
+  .stat .lbl{font-size:13px;color:var(--muted);margin-top:4px}
+  .stat .bar{height:6px;border-radius:999px;background:var(--panel2);margin-top:12px;overflow:hidden}
+  .stat .bar i{display:block;height:100%;border-radius:999px}
+
+  /* TOC */
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 22px;margin-bottom:34px}
+  .toc h3{margin:0 0 10px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:40px}
+  .toc li{margin:4px 0}
+
+  section{margin-bottom:40px}
+  h2{font-size:24px;margin:0 0 18px;padding-bottom:12px;border-bottom:1px solid var(--line);
+     display:flex;align-items:center;gap:12px}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;
+    border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#04121f;
+    font-size:16px;font-weight:800;flex:none}
+  h3{font-size:18px;margin:24px 0 10px;color:#fff}
+  p,li{color:#d4dcec}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+
+  .feature{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;
+    transition:transform .15s ease,border-color .15s ease}
+  .feature:hover{transform:translateY(-3px);border-color:var(--brand)}
+  .feature .ico{font-size:22px;margin-bottom:8px}
+  .feature h4{margin:0 0 6px;font-size:16px;color:#fff}
+  .feature p{margin:0;font-size:14px;color:var(--muted)}
+  .tag{display:inline-block;font-size:11px;color:var(--brand2);background:rgba(34,211,238,.1);
+    border:1px solid rgba(34,211,238,.25);border-radius:6px;padding:2px 8px;margin-top:10px}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;overflow:hidden;border-radius:12px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  tr:last-child td{border-bottom:none}
+  td code,p code,li code{background:#0b1120;border:1px solid var(--line);border-radius:6px;
+    padding:1px 6px;font-size:13px;color:#8fd3ff;font-family:"SF Mono",Menlo,Consolas,monospace}
+
+  .pill{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .pill.ok{color:#04231a;background:var(--ok)}
+  .pill.warn{color:#2a2000;background:var(--warn)}
+  .pill.bad{color:#2a0808;background:var(--bad)}
+
+  ul.clean{list-style:none;padding:0;margin:0}
+  ul.clean li{position:relative;padding-left:26px;margin:9px 0}
+  ul.clean li::before{content:"";position:absolute;left:6px;top:11px;width:7px;height:7px;
+    border-radius:50%;background:var(--brand2)}
+  ul.pro li::before{background:var(--ok)}
+  ul.con li::before{background:var(--warn)}
+
+  .score-row{display:flex;align-items:center;gap:16px;margin:14px 0}
+  .score-row .name{width:130px;font-size:14px;color:#fff;flex:none}
+  .track{flex:1;height:10px;background:var(--panel2);border-radius:999px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+  .score-row .val{width:52px;text-align:right;font-weight:700;color:var(--brand2);flex:none}
+
+  .callout{border-left:3px solid var(--brand);background:var(--panel2);border-radius:0 12px 12px 0;
+    padding:14px 18px;margin:16px 0}
+
+  ol.rec{counter-reset:r;list-style:none;padding:0;margin:0}
+  ol.rec li{position:relative;padding:14px 16px 14px 56px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;margin:10px 0}
+  ol.rec li::before{counter-increment:r;content:counter(r);position:absolute;left:14px;top:14px;
+    width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--brand),var(--brand2));
+    color:#04121f;font-weight:800;display:flex;align-items:center;justify-content:center}
+  ol.rec li b{color:#fff}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;border-top:1px solid var(--line);
+    padding-top:24px;margin-top:20px}
+
+  @media(max-width:760px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .toc ol{columns:1}
+    .hero h1{font-size:30px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="badge">项目分析报告 · 2026-09-09</span>
+    <h1>Takin-JMeter 项目分析报告</h1>
+    <p>基于 Apache JMeter 5.3.1 的深度定制分支，数列科技（ShulieTech）出品，是开源全链路压测平台 <b>Takin</b> 的云原生压测引擎。本报告聚焦其相对上游 JMeter 的定制能力、代码质量与性能表现。</p>
+    <div class="meta">
+      <span>📦 ivanmissu/Takin-jmeter</span>
+      <span>🌿 main @ 868909a</span>
+      <span>📅 上游快照 2021-12-06</span>
+      <span>☕ Java 8 · Gradle</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- Stat cards -->
+  <div class="stats">
+    <div class="stat">
+      <div class="num">1,404</div>
+      <div class="lbl">Java 源文件</div>
+      <div class="bar"><i style="width:100%;background:var(--brand)"></i></div>
+    </div>
+    <div class="stat">
+      <div class="num">246K<small> 行</small></div>
+      <div class="lbl">Java 代码总量</div>
+      <div class="bar"><i style="width:100%;background:var(--brand2)"></i></div>
+    </div>
+    <div class="stat">
+      <div class="num">42<small> 文件</small></div>
+      <div class="lbl">shulie 定制改动</div>
+      <div class="bar"><i style="width:20%;background:var(--warn)"></i></div>
+    </div>
+    <div class="stat">
+      <div class="num">0</div>
+      <div class="lbl">定制代码单元测试</div>
+      <div class="bar"><i style="width:4%;background:var(--bad)"></i></div>
+    </div>
+  </div>
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h3>目录</h3>
+    <ol>
+      <li><a href="#s1">项目概述</a></li>
+      <li><a href="#s2">项目能力（功能特性）</a></li>
+      <li><a href="#s3">代码质量评估</a></li>
+      <li><a href="#s4">性能评估</a></li>
+      <li><a href="#s5">总体评价与建议</a></li>
+    </ol>
+  </nav>
+
+  <!-- Section 1 -->
+  <section id="s1">
+    <h2><span class="n">1</span>项目概述</h2>
+    <div class="card">
+      <p>Takin-JMeter 是 <b>Apache JMeter 5.3.1 的深度定制分支</b>，由数列科技（ShulieTech）维护，是其开源全链路压测平台 <b>Takin</b> 的压测引擎组件。它并非独立的新项目，而是在标准 JMeter 内核之上，围绕"<b>云原生、分布式、可编排的生产环境全链路压测</b>"目标做的二次开发。</p>
+      <ul class="clean">
+        <li><b>代码规模</b>：约 1,404 个 Java 文件、24.6 万行 Java 代码（绝大部分为上游 JMeter 原生代码）。</li>
+        <li><b>定制代码</b>：约 42 个文件含 <code>shulie</code> 改动，其中 23 个是全新的 <code>org.apache.jmeter.shulie.*</code> 包类，其余为对原生类的侵入式修改。</li>
+        <li><b>构建体系</b>：Gradle（Kotlin DSL），沿用 JMeter 多模块结构（core / components / protocol / functions / jorphan / launcher）。</li>
+        <li><b>技术栈</b>：Java 8、SLF4J、Apache Commons，外加 <code>com.alibaba:fastjson</code> 与 <code>io.shulie.*</code> 私有工具包（redis-tool、executor-tool、amdb-tool、pradar log-remoting）。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Section 2 -->
+  <section id="s2">
+    <h2><span class="n">2</span>项目能力（功能特性）</h2>
+    <p>相对原生 JMeter，定制能力集中在"把 JMeter 改造成一个受控的、可被云平台调度的压测引擎"：</p>
+    <div class="grid2">
+      <div class="feature">
+        <div class="ico">☁️</div>
+        <h4>云平台化启动与生命周期回调</h4>
+        <p>新增 <code>PressureEngineParams</code>（sceneId / resultId / customerId / callbackUrl / podNumber）参数模型；<code>HttpNotifyTroCloudUtils</code> 在启动/失败/结束时 HTTP 回调 Takin Cloud；<code>HttpUtils</code> 为零依赖的原生 Socket HTTP 客户端。</p>
+        <span class="tag">NewDriver · JMeter.start()</span>
+      </div>
+      <div class="feature">
+        <div class="ico">🧩</div>
+        <h4>分布式（多 Pod）压测</h4>
+        <p>引入 <code>pod.number</code>，任务切分到多个容器实例，指标带 <code>podNum</code> 标签。<code>CSVDataStore</code> + <code>FileConsumer</code> 基于 NIO 内存映射零拷贝分区读取大文件，多队列轮询取数保证数据不重复。</p>
+        <span class="tag">MappedByteBuffer 零拷贝</span>
+      </div>
+      <div class="feature">
+        <div class="ico">🎚️</div>
+        <h4>动态 TPS 流量控制（核心亮点）</h4>
+        <p><code>DynamicContext</code> 后台定时（默认 5s）从 <b>Redis</b> 拉取 TPS 目标与上浮因子；改造后的 <code>ConstantThroughputTimer</code> 按"总目标 TPS × 业务占比 ×（1+因子）"实时计算并发，实现不重启实时调速。</p>
+        <span class="tag">Redis 实时调速</span>
+      </div>
+      <div class="feature">
+        <div class="ico">🔗</div>
+        <h4>全链路追踪（Pradar 集成）</h4>
+        <p><code>JmeterTraceIdGenerator</code> 生成 Pradar 风格 traceId（IP+PID+时间戳+自增），在 <code>JMeterThread</code> 注入线程变量；透传 <code>p-pradar-traceid</code> / <code>p-pradar-userdata</code> 请求头，支持影子库路由。</p>
+        <span class="tag">压测标透传</span>
+      </div>
+      <div class="feature">
+        <div class="ico">📤</div>
+        <h4>结果数据上报改造</h4>
+        <p><code>ResultCollector</code> 集成 <code>io.shulie.jmeter.tool.amdb</code> 的 <code>LogPusher</code>，将采样结果推送至 AMDB 数据平台；<code>JTLUtil</code> 自定义以 <code>|</code> 分隔、字段截断的紧凑 JTL 格式便于管道传输。</p>
+        <span class="tag">AMDB LogPusher</span>
+      </div>
+      <div class="feature">
+        <div class="ico">🧰</div>
+        <h4>其他能力</h4>
+        <p><code>DesUtil</code> 提供 DES 加解密（用于 Redis 密码等敏感配置）；完整保留 JMeter 原生协议采样器（HTTP/JMS/JDBC/FTP/LDAP/TCP/MongoDB）与 <code>lib/ext</code> 常用插件。</p>
+        <span class="tag">全协议兼容</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3 -->
+  <section id="s3">
+    <h2><span class="n">3</span>代码质量评估</h2>
+
+    <div class="callout">
+      <b>整体印象：</b>定制代码属于"能用、面向交付"的工程实现，功能目标明确、可读性尚可（60 个文件含中文注释，16 个署名 <code>@author lipeng</code>），但在健壮性、规范性与可测试性上与其所基于的上游 Apache JMeter 存在明显落差。
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">✅ 优点</h3>
+        <ul class="clean pro">
+          <li><b>模块隔离清晰</b>：自研代码统一收敛在 <code>shulie</code> 包，改动多以 <code>//add by lipeng</code> 标注，便于识别与 rebase。</li>
+          <li><b>依赖管理规范</b>：BOM 统一版本、<code>checksum.xml</code> 做依赖 SHA 校验，供应链完整性意识好。</li>
+          <li><b>性能点有针对性设计</b>：CSV 内存映射零拷贝、无锁原子类、并发容器使用得当。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">⚠️ 安全性关注点</h3>
+        <ul class="clean con">
+          <li><b>fastjson 1.2.72</b>：存在历史反序列化 RCE 风险，建议升级 fastjson2 或改用 Jackson。</li>
+          <li><b>DES + 硬编码密钥</b> <code>DBMEETYOURMAKERSMANDKEY</code>：加密强度低、密钥泄露风险高。</li>
+          <li><b>Redis 密码</b>经系统属性传递并在异常日志中打印，存在敏感信息泄露。</li>
+          <li><b>基线陈旧</b>：JMeter 5.3.1（2020），未跟进上游安全修复。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>主要问题清单</h3>
+    <table>
+      <thead><tr><th>类别</th><th>问题</th><th>位置举例</th></tr></thead>
+      <tbody>
+        <tr><td>异常处理</td><td>空 catch / <code>printStackTrace</code> 吞异常，缺乏统一处理</td><td><code>CSVDataStore</code>、<code>FileConsumer</code>、<code>HttpUtils</code></td></tr>
+        <tr><td>递归风险</td><td><code>peekPartitionValue</code> 队列空时无限递归重试，可能 <code>StackOverflowError</code></td><td><code>CSVDataStore</code></td></tr>
+        <tr><td>进程级副作用</td><td>工具类中直接 <code>System.exit(-1)</code>，耦合过重</td><td><code>JedisUtil</code>、<code>FileConsumer</code>、<code>JTLUtil</code></td></tr>
+        <tr><td>并发正确性</td><td><code>public static</code> 可变字段非 volatile，存在可见性隐患</td><td><code>DynamicContext</code></td></tr>
+        <tr><td>硬编码</td><td>DES 密钥硬编码、编码写死 <code>GBK</code></td><td><code>DesUtil</code></td></tr>
+        <tr><td>测试缺失</td><td>自研代码单测数量为 <b>0</b>（上游有 242 个测试类）</td><td>全部 <code>shulie</code> 包</td></tr>
+        <tr><td>代码整洁</td><td>通配导入 <code>import java.io.*</code>、死代码、冗余嵌套</td><td><code>HttpUtils</code>、<code>JedisUtil</code></td></tr>
+        <tr><td>弱算法</td><td>仍使用 <b>DES</b>（56 位，已不安全）</td><td><code>DesUtil</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section 4 -->
+  <section id="s4">
+    <h2><span class="n">4</span>性能评估</h2>
+    <p>继承了 JMeter 成熟的多线程压测内核，定制部分整体朝高并发、低开销方向优化，但也引入若干潜在瓶颈。</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">🚀 性能设计亮点</h3>
+        <ul class="clean pro">
+          <li><b>零拷贝文件读取</b>：<code>MappedByteBuffer</code> 内存映射 + 分片读取超大 CSV，避免多次内存拷贝。</li>
+          <li><b>无锁并发结构</b>：TPS 与追踪 ID 用 <code>Atomic*</code>，CSV 分发用有界 <code>LinkedBlockingQueue</code>。</li>
+          <li><b>动态限流低成本</b>：后台单线程定时刷新静态字段，热点路径仅无锁读取。</li>
+          <li><b>异步结果上报</b>：线程池 + <code>LogPusher</code> 异步推送，降低采样线程 I/O 阻塞。</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">⚠️ 性能风险点</h3>
+        <ul class="clean con">
+          <li><b>有界队列偏小</b>：<code>csvDataQuene</code> 容量仅 120，超高 TPS 下可能成参数供给瓶颈。</li>
+          <li><b>递归轮询空转</b>：队列空时递归 + <code>sleep(300ms)</code>，高压下造成延迟抖动。</li>
+          <li><b>手写 HTTP 客户端</b>：每次新建 Socket 未做连接池复用，不宜用于高频路径。</li>
+          <li><b>DES 加解密</b>：热点路径频繁调用有 CPU 开销（当前仅启动期使用，影响有限）。</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:18px">
+      <h3 style="margin-top:0">综合性能画像</h3>
+      <div class="score-row"><span class="name">引擎内核</span><span class="track"><i style="width:92%"></i></span><span class="val">优秀</span></div>
+      <div class="score-row"><span class="name">数据分发</span><span class="track"><i style="width:78%"></i></span><span class="val">良好</span></div>
+      <div class="score-row"><span class="name">动态控流</span><span class="track"><i style="width:85%"></i></span><span class="val">优秀</span></div>
+      <div class="score-row"><span class="name">结果上报</span><span class="track"><i style="width:80%"></i></span><span class="val">良好</span></div>
+      <div class="score-row"><span class="name">边界处理</span><span class="track"><i style="width:55%;background:linear-gradient(90deg,var(--warn),#f59e0b)"></i></span><span class="val">中等</span></div>
+      <p style="margin:14px 0 0;color:var(--muted)">结论：内核层性能可靠（等同 JMeter 5.3.1，业界成熟）；定制层针对分布式压测关键路径优化合理，<b>适用于大规模生产全链路压测</b>；主要隐患集中在少数边界处理，属可修复的局部问题。</p>
+    </div>
+  </section>
+
+  <!-- Section 5 -->
+  <section id="s5">
+    <h2><span class="n">5</span>总体评价与建议</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">定位准确、能力独特 <span class="pill ok">亮点</span></h3>
+        <p>成功把通用压测工具 JMeter 改造成云平台可调度、可实时调速、可全链路追踪的生产级压测引擎。"Redis 动态 TPS 控制 + Pradar 压测标透传 + 多 Pod CSV 分区 + AMDB 结果上报"组合在同类开源方案中较有价值。</p>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">工程成熟度中等 <span class="pill warn">待改进</span></h3>
+        <p>内核依托 Apache JMeter 质量有保障，但自研定制层在测试覆盖、异常处理、安全实践上明显偏弱，更像"内部快速迭代交付"的产物，而非经过长期打磨的开源库。</p>
+      </div>
+    </div>
+
+    <h3>优先改进建议</h3>
+    <ol class="rec">
+      <li><b>补齐测试</b>：为 <code>DynamicContext</code>、<code>CSVDataStore</code>、<code>TraceIdGenerator</code>、<code>HttpUtils</code> 等核心类编写单元测试。</li>
+      <li><b>安全加固</b>：升级 fastjson（→ fastjson2 / Jackson）、DES 换 AES-GCM、移除硬编码密钥、日志脱敏 Redis 密码。</li>
+      <li><b>健壮性</b>：将 <code>peekPartitionValue</code> 无限递归改为带退避的循环；移除工具类中的 <code>System.exit</code>，改为向上抛异常。</li>
+      <li><b>并发正确性</b>：<code>DynamicContext</code> 可变静态字段加 <code>volatile</code> 或改用 <code>AtomicReference</code>。</li>
+      <li><b>跟进上游</b>：评估从 JMeter 5.3.1 升级到较新版本以吸收上游安全/性能修复。</li>
+      <li><b>补充 CI</b>：仓库缺少 <code>.github/workflows</code>，建议接入自动构建 + 静态扫描（Checkstyle/SpotBugs 配置已存在）。</li>
+    </ol>
+  </section>
+
+  <footer>
+    本报告基于对仓库源码的静态分析（未实际编译运行），聚焦相对上游 Apache JMeter 的定制改动部分。<br>
+    Takin-JMeter 项目分析 · 生成于 2026-09-09
+  </footer>
+
+</div>
+</body>
+</html>
